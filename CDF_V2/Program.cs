@@ -51,8 +51,8 @@ class Program
             //smoothedFunc = DigitalFiltering.ParSeqBranch(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParBranchLim(noisyFunc, coefs, k, m);
-            smoothedFunc = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranchLim2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
+            smoothedFunc = DigitalFiltering.ParBranchLim2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.MySeq(noisyFunc, k, m);
 
             stopwatch.Stop();
