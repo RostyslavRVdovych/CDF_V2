@@ -370,20 +370,18 @@ namespace Algorithms
                 x[0, i] = b[i];
             }
             int p = Environment.ProcessorCount;
-            Parallel.For(0, n, t =>
+            Parallel.For(0, p, t =>
             {
                 for (int j = 1; j <= k; j++)
                 {
                     for (int i = Math.Max(0, (j - k) * m + (t * n / p)); i <= Math.Min(n - 1, (k - j) * m + ((t + 1) * n / p) - 1); i++)
                     {
                         double p2 = 0.0;
-                        //x[j, i] = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
                             if (s >= 0 && s < n)
                             {
                                 p2 += x[j - 1, s] * f[s - i + m];
-                                //x[j, i] += x[j - 1, s] * f[s - i + m];
                             }
                         }
                         x[j, i] = p2;
