@@ -122,6 +122,10 @@ namespace Algorithms
         //ALGORITHMS
         //NameOfAlgorithm(noisyFunction, arrayOfCoefs, numOfIter, windowRadius)
 
+        //--------------------------------OLD ALGS
+
+
+        //Послідовний алгоритм зі значеннями з попереднього кроку
         public static double[] Seq(double[] b, double[] f, int k, int m)
         {
             double[] a = (double[])b.Clone();
@@ -143,6 +147,9 @@ namespace Algorithms
             }
             return a;
         }
+
+
+        //Паралельний алгоритм (синхронна схема)
         public static double[] Par(double[] b, double[] f, int k, int m)
         {
             double[] a = (double[])b.Clone();
@@ -164,7 +171,10 @@ namespace Algorithms
             }
             return a;
         }
-        public static double[] ParBranch(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з автономними гілками (не правильно працює)
+        public static double[] OldParBranch(double[] b, double[] f, int k, int m)
         {
             double[] a = (double[])b.Clone();
             double[] c = (double[])b.Clone();
@@ -196,28 +206,31 @@ namespace Algorithms
             });
             return c;
         }
-        public static double[] ParBranchLim(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з обмеженим паралелізмом (не правильно працює)
+        public static double[] OldParBranchLim(double[] b, double[] f, int k, int m)
         {
             double[] c = (double[])b.Clone();
             //int p = 3;
             int p = Environment.ProcessorCount;
             Parallel.For(0, p, t =>
             {
-            //    int index1 = Math.Max(0, (t * b.Length / p)) - m * k;
-            //    int index2 = Math.Min(b.Length - 1, ((t + 1) * b.Length / p) - 1) + m * k;
-            //    double[] branch = new double[index2 - index1];
-            //    for (int i = index1; i < index2; i++)
-            //    {
-            //        if (i >= 0 && i < b.Length)
-            //        {
-            //            branch[i] = b[i];
-            //        }
-            //        else
-            //        {
-            //            branch[i] = 0;
-            //        }
-            //    }
-            //    double[] tempBranch = branch;
+                //    int index1 = Math.Max(0, (t * b.Length / p)) - m * k;
+                //    int index2 = Math.Min(b.Length - 1, ((t + 1) * b.Length / p) - 1) + m * k;
+                //    double[] branch = new double[index2 - index1];
+                //    for (int i = index1; i < index2; i++)
+                //    {
+                //        if (i >= 0 && i < b.Length)
+                //        {
+                //            branch[i] = b[i];
+                //        }
+                //        else
+                //        {
+                //            branch[i] = 0;
+                //        }
+                //    }
+                //    double[] tempBranch = branch;
 
                 double[] temp = c;
                 double[] temp2;
@@ -248,8 +261,75 @@ namespace Algorithms
             return c;
         }
 
-        //new algs
-        public static double[] SeqBranch(double[] b, double[] f, int k, int m)
+        //--------------------------------NEW ALGS
+
+
+        //Послідовний алгоритм зі значеннями з попереднього кроку з 2-вимірним масивом
+        public static double[] Seq2(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+            for (int j = 1; j <= k; j++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    x[j, i] = 0.0;
+                    for (int s = i - m; s <= i + m; s++)
+                    {
+                        if (s >= 0 && s < n)
+                        {
+                            x[j, i] += x[j - 1, s] * f[s - i + m];
+                        }
+                    }
+                }
+            }
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
+
+        //Паралельний алгоритм (синхронна схема) з 2-вимірним масивом
+        public static double[] Par2(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+            for (int j = 1; j <= k; j++)
+            {
+                Parallel.For(0, n, i =>
+                {
+                    x[j, i] = 0.0;
+                    for (int s = i - m; s <= i + m; s++)
+                    {
+                        if (s >= 0 && s < n)
+                        {
+                            x[j, i] += x[j - 1, s] * f[s - i + m];
+                        }
+                    }
+                });
+            }
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
+
+        //Послідовна реалізація паралельного алгоритму з автономними гілками з 2-вимірним масивом
+        public static double[] SeqBranch2(double[] b, double[] f, int k, int m)
         {
             int n = b.Length;
             double[,] x = new double[k + 1, n];
@@ -281,7 +361,10 @@ namespace Algorithms
             }
             return c;
         }
-        public static double[] ParSeqBranch(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом
+        public static double[] ParBranch2(double[] b, double[] f, int k, int m)
         {
             int n = b.Length;
             double[,] x = new double[k + 1, n];
@@ -316,7 +399,10 @@ namespace Algorithms
             }
             return c;
         }
-        public static double[] ParBranch2(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з автономними гілками з масивами під кожну гілку
+        public static double[] ParBranch(double[] b, double[] f, int k, int m)
         {
             double[] c = (double[])b.Clone();
             Parallel.For(0, b.Length, t =>
@@ -361,7 +447,10 @@ namespace Algorithms
             });
             return c;
         }
-        public static double[] ParLim(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом
+        public static double[] ParLim2(double[] b, double[] f, int k, int m)
         {
             int n = b.Length;
             double[,] x = new double[k + 1, n];
@@ -395,7 +484,10 @@ namespace Algorithms
             }
             return c;
         }
-        public static double[] ParBranchLim2(double[] b, double[] f, int k, int m)
+
+
+        //Паралельний алгоритм з обмеженим паралелізмом з масивами під кожну гілку
+        public static double[] ParLim(double[] b, double[] f, int k, int m)
         {
             double[] c = (double[])b.Clone();
             //int p = 3;
@@ -456,7 +548,8 @@ namespace Algorithms
             return c;
         }
 
-        //my alg
+
+        //----------------my alg
         public static double[] MySeq(double[] b, int k, int m)
         {
             double[] c = (double[])b.Clone();

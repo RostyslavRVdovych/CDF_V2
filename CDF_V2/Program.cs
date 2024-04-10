@@ -7,7 +7,7 @@ class Program
     {
         int n = 1000000; // кількість елементів
         int k = 3; // кількість переобчислень
-        int m = 3; // рухоме вікно
+        int m = 1; // рухоме вікно
 
         double xmin = 0;
         double xmax = 2 * Math.PI;
@@ -47,12 +47,12 @@ class Program
             //smoothedFunc = DigitalFiltering.Seq(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.Par(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParBranch(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.SeqBranch(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParSeqBranch(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranchLim(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
-            smoothedFunc = DigitalFiltering.ParBranchLim2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
+            smoothedFunc = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.SeqBranch2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.MySeq(noisyFunc, k, m);
 
             stopwatch.Stop();
