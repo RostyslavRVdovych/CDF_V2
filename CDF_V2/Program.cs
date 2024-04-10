@@ -6,7 +6,7 @@ class Program
     static void Main()
     {
         int n = 1000000; // кількість елементів
-        int k = 3; // кількість переобчислень
+        int k = 1; // кількість переобчислень
         int m = 1; // рухоме вікно
 
         double xmin = 0;
@@ -70,6 +70,15 @@ class Program
             deviation = sumOfDevioations / func.Length;
 
             Console.WriteLine("Середнє відхилення: " + deviation);
+
+            double meanSquareDev;
+            double sumOfMeanSquareDev = 0.0;
+            for (int j = 0; j < func.Length; j++)
+            {
+                sumOfMeanSquareDev = Math.Pow(func[j] - smoothedFunc[j], 2);
+            }
+            meanSquareDev = Math.Sqrt(sumOfMeanSquareDev / func.Length);
+            Console.WriteLine("Середнє квадратичне відхилення: " + meanSquareDev);
         }
         sum /= iter;
         Console.WriteLine($"Середнє: {sum}");
