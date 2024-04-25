@@ -337,12 +337,28 @@ namespace Algorithms
             {
                 x[0, i] = b[i];
             }
+
+
+            //bool[,] isCalculated = new bool[k, n];
+            //for (int j = 0; j < k; j++)
+            //{
+            //    for (int i = 0; i < n; i++)
+            //    {
+            //        isCalculated[j, i] = false;
+            //    }
+            //}
+
             for (int t = 0; t < n; t++)
             {
                 for (int j = 1; j <= k; j++)
                 {
                     for (int i = Math.Max(0, (j - k) * m + t); i <= Math.Min(n - 1, (k - j) * m + t); i++)
                     {
+
+                        //if (!isCalculated[j - 1, i])
+                        //{
+                        //    isCalculated[j - 1, i] = true;
+
                         x[j, i] = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
@@ -351,6 +367,7 @@ namespace Algorithms
                                 x[j, i] += x[j - 1, s] * f[s - i + m];
                             }
                         }
+                        //}
                     }
                 }
             }
@@ -372,7 +389,11 @@ namespace Algorithms
             {
                 x[0, i] = b[i];
             }
-            Parallel.For(0, n, t =>
+            //ParallelOptions po = new()
+            //{
+            //    MaxDegreeOfParallelism = 2
+            //};
+            Parallel.For(0, n,/* po,*/ t =>
             {
                 for (int j = 1; j <= k; j++)
                 {
@@ -459,6 +480,7 @@ namespace Algorithms
                 x[0, i] = b[i];
             }
             int p = Environment.ProcessorCount;
+            //int p = 12;
             Parallel.For(0, p, t =>
             {
                 for (int j = 1; j <= k; j++)
@@ -547,6 +569,69 @@ namespace Algorithms
             });
             return c;
         }
+
+
+        //Паралельний алгоритм з автономними гілками з булевим масивом для уникнення дублювань
+        public static double[] ParBranch3(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            bool[,] isCalculated = new bool[k, n];
+            for (int j = 0; j < k; j++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    isCalculated[j, i] = false;
+                }
+            }
+
+            //ParallelOptions po = new()
+            //{
+            //    MaxDegreeOfParallelism = 2
+            //};
+
+            Parallel.For(0, n,/* po,*/ t =>
+            {
+                for (int j = 1; j <= k; j++)
+                {
+                    for (int i = Math.Max(0, (j - k) * m + t); i <= Math.Min(n - 1, (k - j) * m + t); i++)
+                    {
+                        // Умова для уникнення дублювань
+                        if (!isCalculated[j - 1, i])
+                        {
+                            double p = 0.0;
+                            //x[j, i] = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                    //x[j, i] += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p;
+                            isCalculated[j - 1, i] = true;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+                }
+            });
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
 
 
         //----------------my alg

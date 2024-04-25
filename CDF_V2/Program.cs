@@ -6,8 +6,8 @@ class Program
     static void Main()
     {
         int n = 1000000; // кількість елементів
-        int k = 1; // кількість переобчислень
-        int m = 1; // рухоме вікно
+        int k = 9; // кількість переобчислень
+        int m = 3; // рухоме вікно
 
         double xmin = 0;
         double xmax = 2 * Math.PI;
@@ -37,7 +37,7 @@ class Program
         //double[] coefs = DigitalFiltering.KaiserWindow(m, alpha);
         double[] smoothedFunc;
 
-        int iter = 1000;
+        int iter = 100;
         for (int i = 0; i < iter; i++)
         {
 
@@ -49,11 +49,12 @@ class Program
             //smoothedFunc = DigitalFiltering.ParBranch(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
-            smoothedFunc = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.SeqBranch2(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
+            smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.MySeq(noisyFunc, k, m);
+            //smoothedFunc = DigitalFiltering.ParBranch3(noisyFunc, coefs, k, m);
 
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;
@@ -71,14 +72,14 @@ class Program
 
             Console.WriteLine("Середнє відхилення: " + deviation);
 
-            double meanSquareDev;
-            double sumOfMeanSquareDev = 0.0;
-            for (int j = 0; j < func.Length; j++)
-            {
-                sumOfMeanSquareDev = Math.Pow(func[j] - smoothedFunc[j], 2);
-            }
-            meanSquareDev = Math.Sqrt(sumOfMeanSquareDev / func.Length);
-            Console.WriteLine("Середнє квадратичне відхилення: " + meanSquareDev);
+            //double meanSquareDev;
+            //double sumOfMeanSquareDev = 0.0;
+            //for (int j = 0; j < func.Length; j++)
+            //{
+            //    sumOfMeanSquareDev = Math.Pow(func[j] - smoothedFunc[j], 2);
+            //}
+            //meanSquareDev = Math.Sqrt(sumOfMeanSquareDev / func.Length);
+            //Console.WriteLine("Середнє квадратичне відхилення: " + meanSquareDev);
         }
         sum /= iter;
         Console.WriteLine($"Середнє: {sum}");
