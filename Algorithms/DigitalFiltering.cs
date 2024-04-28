@@ -138,7 +138,7 @@ namespace Algorithms
                     a[i] = 0;
                     for (int l = i - m; l <= i + m; l++)
                     {
-                        if (l >= 0 && l < a.Length)
+                        if (l >= 0 && l < a.Length - 1)
                         {
                             a[i] += temp[l] * f[l - i + m];
                         }
@@ -162,7 +162,7 @@ namespace Algorithms
                     a[i] = 0;
                     for (int l = i - m; l <= i + m; l++)
                     {
-                        if (l >= 0 && l < a.Length)
+                        if (l >= 0 && l < a.Length - 1)
                         {
                             a[i] += temp[l] * f[l - i + m];
                         }
@@ -280,7 +280,7 @@ namespace Algorithms
                     x[j, i] = 0.0;
                     for (int s = i - m; s <= i + m; s++)
                     {
-                        if (s >= 0 && s < n)
+                        if (s >= 0 && s < n - 1)
                         {
                             x[j, i] += x[j - 1, s] * f[s - i + m];
                         }
@@ -312,7 +312,7 @@ namespace Algorithms
                     x[j, i] = 0.0;
                     for (int s = i - m; s <= i + m; s++)
                     {
-                        if (s >= 0 && s < n)
+                        if (s >= 0 && s < n - 1)
                         {
                             x[j, i] += x[j - 1, s] * f[s - i + m];
                         }
@@ -362,7 +362,7 @@ namespace Algorithms
                         x[j, i] = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
-                            if (s >= 0 && s < n)
+                            if (s >= 0 && s < n - 1)
                             {
                                 x[j, i] += x[j - 1, s] * f[s - i + m];
                             }
@@ -441,13 +441,12 @@ namespace Algorithms
                         branch[i] = 0;
                     }
                 }
-                double[] tempBranch = branch;
 
                 for (int j = 0; j < k; j++)
                 {
-                    tempBranch = branch;
-                    int startIndex = (j - k + 1) * m + m * k;
-                    int endIndex = (k - 1 - j) * m + m * k;
+                    double[] tempBranch = (double[])branch.Clone();
+                    int startIndex = m * (j + 1);
+                    int endIndex = (branch.Length - 1) - (m * (j + 1));
                     for (int i = startIndex; i <= endIndex; i++)
                     {
                         if (i + t >= m * k && i + t <= b.Length - 1 + m * k)
@@ -490,7 +489,7 @@ namespace Algorithms
                         double p2 = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
-                            if (s >= 0 && s < n)
+                            if (s >= 0 && s < n - 1)
                             {
                                 p2 += x[j - 1, s] * f[s - i + m];
                             }
@@ -530,11 +529,10 @@ namespace Algorithms
                         branch[i - index1] = 0;
                     }
                 }
-                double[] tempBranch = (double[])branch.Clone();
 
                 for (int j = 0; j < k; j++)
                 {
-                    tempBranch = branch;
+                    double[] tempBranch = (double[])branch.Clone();
                     int startIndex = m * (j + 1);
                     int endIndex = (branch.Length - 1) - (m * (j + 1));
                     for (int i = startIndex; i <= endIndex; i++)
@@ -608,7 +606,7 @@ namespace Algorithms
                             //x[j, i] = 0.0;
                             for (int s = i - m; s <= i + m; s++)
                             {
-                                if (s >= 0 && s < n)
+                                if (s >= 0 && s < n - 1)
                                 {
                                     p += x[j - 1, s] * f[s - i + m];
                                     //x[j, i] += x[j - 1, s] * f[s - i + m];
