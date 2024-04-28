@@ -631,6 +631,188 @@ namespace Algorithms
         }
 
 
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи Threads
+        public static double[] ParLim3(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            int p = Environment.ProcessorCount;
+            //int p = 12;
+            Thread[] threads = new Thread[p];
+            int chunkSize = n / p;
+
+            for (int t = 0; t < p; t++)
+            {
+                int start = t * chunkSize;
+                int end = (t == p - 1) ? n - 1 : (t + 1) * chunkSize - 1;
+
+                threads[t] = new Thread(() =>
+                {
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
+                        {
+                            double p2 = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n - 1)
+                                {
+                                    p2 += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p2;
+                        }
+                    }
+                });
+                threads[t].Start();
+            }
+
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
+
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи ThreadPool
+        public static double[] ParLim4(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            int p = Environment.ProcessorCount;
+            //int p = 12;
+            int chunkSize = n / p;
+
+            ManualResetEvent[] waitHandles = new ManualResetEvent[p];
+            for (int t = 0; t < p; t++)
+            {
+                waitHandles[t] = new ManualResetEvent(false);
+                ThreadPool.QueueUserWorkItem(state =>
+                {
+                    int threadIndex = (int)state;
+                    int start = threadIndex * chunkSize;
+                    int end = (threadIndex == p - 1) ? n - 1 : (threadIndex + 1) * chunkSize - 1;
+
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
+                        {
+                            double p2 = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n - 1)
+                                {
+                                    p2 += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p2;
+                        }
+                    }
+                    waitHandles[threadIndex].Set();
+                }, t);
+            }
+
+            WaitHandle.WaitAll(waitHandles);
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
+
+        //Паралельний алгоритм з обмеженим паралелізмом з масивами під кожну гілку, використовуючи ThreadPool
+        public static double[] ParLim5(double[] b, double[] f, int k, int m)
+        {
+            double[] c = (double[])b.Clone();
+            int p = Environment.ProcessorCount;
+            // int p = 3;
+            ManualResetEvent[] waitHandles = new ManualResetEvent[p];
+
+            for (int t = 0; t < p; t++)
+            {
+                waitHandles[t] = new ManualResetEvent(false);
+                ThreadPool.QueueUserWorkItem(state =>
+                {
+                    int threadIndex = (int)state;
+                    int index1 = (threadIndex * b.Length / p) - m * k;
+                    int index2 = ((threadIndex + 1) * b.Length / p) - 1 + m * k;
+                    double[] branch = new double[index2 - index1 + 1];
+                    for (int i = index1; i <= index2; i++)
+                    {
+                        if (i >= 0 && i < b.Length)
+                        {
+                            branch[i - index1] = b[i];
+                        }
+                        else
+                        {
+                            branch[i - index1] = 0;
+                        }
+                    }
+
+                    for (int j = 0; j < k; j++)
+                    {
+                        double[] tempBranch = (double[])branch.Clone();
+                        int startIndex = m * (j + 1);
+                        int endIndex = (branch.Length - 1) - (m * (j + 1));
+                        for (int i = startIndex; i <= endIndex; i++)
+                        {
+                            if (threadIndex == 0 && i < k * m)
+                            {
+                                continue;
+                            }
+                            else if (threadIndex == p - 1 && i > branch.Length - 1 - k * m)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                double sum = 0;
+                                for (int l = i - m; l <= i + m; l++)
+                                {
+                                    if (l >= 0 && l < b.Length)
+                                    {
+                                        sum += tempBranch[l] * f[l - i + m];
+                                    }
+                                }
+                                branch[i] = sum;
+
+                                if (j == k - 1)
+                                {
+                                    c[i + index1] = branch[i];
+                                }
+                            }
+                        }
+                    }
+
+                    waitHandles[threadIndex].Set(); // Сигналізуємо про завершення роботи потоку
+                }, t);
+            }
+
+            WaitHandle.WaitAll(waitHandles); // Чекаємо завершення всіх потоків
+
+            return c;
+        }
+
 
         //----------------my alg
         public static double[] MySeq(double[] b, int k, int m)

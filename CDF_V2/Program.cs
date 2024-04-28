@@ -6,8 +6,8 @@ class Program
     static void Main()
     {
         int n = 1000000; // кількість елементів
-        int k = 9; // кількість переобчислень
-        int m = 3; // рухоме вікно
+        int k = 5; // кількість переобчислень
+        int m = 1; // рухоме вікно
 
         double xmin = 0;
         double xmax = 2 * Math.PI;
@@ -37,7 +37,7 @@ class Program
         //double[] coefs = DigitalFiltering.KaiserWindow(m, alpha);
         double[] smoothedFunc;
 
-        int iter = 100;
+        int iter = 1000;
         for (int i = 0; i < iter; i++)
         {
 
@@ -51,8 +51,11 @@ class Program
             //smoothedFunc = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.SeqBranch2(noisyFunc, coefs, k, m);
-            smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
+            smoothedFunc = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParLim3(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParLim4(noisyFunc, coefs, k, m);
+            //smoothedFunc = DigitalFiltering.ParLim5(noisyFunc, coefs, k, m);
             //smoothedFunc = DigitalFiltering.MySeq(noisyFunc, k, m);
             //smoothedFunc = DigitalFiltering.ParBranch3(noisyFunc, coefs, k, m);
 
