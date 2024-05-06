@@ -122,6 +122,7 @@ namespace Algorithms
         //ALGORITHMS
         //NameOfAlgorithm(noisyFunction, arrayOfCoefs, numOfIter, windowRadius)
 
+
         //--------------------------------OLD ALGS
 
 
@@ -147,8 +148,6 @@ namespace Algorithms
             }
             return a;
         }
-
-
         //Паралельний алгоритм (синхронна схема)
         public static double[] Par(double[] b, double[] f, int k, int m)
         {
@@ -171,8 +170,6 @@ namespace Algorithms
             }
             return a;
         }
-
-
         //Паралельний алгоритм з автономними гілками (не правильно працює)
         public static double[] OldParBranch(double[] b, double[] f, int k, int m)
         {
@@ -180,7 +177,7 @@ namespace Algorithms
             double[] c = (double[])b.Clone();
             Parallel.For(0, a.Length, t =>
             {
-                double[] temp = a;
+                double[] temp = (double[])a.Clone();
                 for (int j = 0; j < k; j++)
                 {
                     int startIndex = Math.Max(0, (j - k + 1) * m + t);
@@ -206,8 +203,6 @@ namespace Algorithms
             });
             return c;
         }
-
-
         //Паралельний алгоритм з обмеженим паралелізмом (не правильно працює)
         public static double[] OldParBranchLim(double[] b, double[] f, int k, int m)
         {
@@ -261,6 +256,7 @@ namespace Algorithms
             return c;
         }
 
+
         //--------------------------------NEW ALGS
 
 
@@ -294,8 +290,6 @@ namespace Algorithms
             }
             return c;
         }
-
-
         //Паралельний алгоритм (синхронна схема) з 2-вимірним масивом
         public static double[] Par2(double[] b, double[] f, int k, int m)
         {
@@ -326,6 +320,112 @@ namespace Algorithms
             }
             return c;
         }
+
+
+
+        //Паралельний алгоритм з автономними гілками з масивами під кожну гілку
+        public static double[] ParBranch(double[] b, double[] f, int k, int m)
+        {
+            double[] c = (double[])b.Clone();
+            Parallel.For(0, b.Length, t =>
+            {
+                double[] branch = new double[2 * m * k + 1];
+                for (int i = 0; i < branch.Length; i++)
+                {
+                    int index = t - k * m + i;
+                    if (index >= 0 && index < b.Length)
+                    {
+                        branch[i] = b[index];
+                    }
+                    else
+                    {
+                        branch[i] = 0;
+                    }
+                }
+
+                for (int j = 0; j < k; j++)
+                {
+                    double[] tempBranch = (double[])branch.Clone();
+                    int startIndex = m * (j + 1);
+                    int endIndex = (branch.Length - 1) - (m * (j + 1));
+                    for (int i = startIndex; i <= endIndex; i++)
+                    {
+                        if (i + t >= m * k && i + t <= b.Length - 1 + m * k)
+                        {
+                            double sum = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                sum += tempBranch[s] * f[s - i + m];
+                            }
+                            branch[i] = sum;
+                        }
+                    }
+                    if (j == k - 1)
+                    {
+                        c[t] = branch[m * k];
+                    }
+                }
+            });
+            return c;
+        }
+        public static double[] ParBranchThreadPool(double[] b, double[] f, int k, int m)
+        {
+            double[] c = (double[])b.Clone();
+
+            CountdownEvent countdownEvent = new(b.Length);
+
+            for (int i = 0; i < b.Length; i++)
+            {
+                ThreadPool.QueueUserWorkItem(state =>
+                {
+                    int t = (int)state;
+                    double[] branch = new double[2 * m * k + 1];
+                    for (int j = 0; j < branch.Length; j++)
+                    {
+                        int index = t - k * m + j;
+                        if (index >= 0 && index < b.Length)
+                        {
+                            branch[j] = b[index];
+                        }
+                        else
+                        {
+                            branch[j] = 0;
+                        }
+                    }
+
+                    for (int j = 0; j < k; j++)
+                    {
+                        double[] tempBranch = (double[])branch.Clone();
+                        int startIndex = m * (j + 1);
+                        int endIndex = (branch.Length - 1) - (m * (j + 1));
+                        for (int i = startIndex; i <= endIndex; i++)
+                        {
+                            if (i + t >= m * k && i + t <= b.Length - 1 + m * k)
+                            {
+                                double sum = 0.0;
+                                for (int s = i - m; s <= i + m; s++)
+                                {
+                                    sum += tempBranch[s] * f[s - i + m];
+                                }
+                                branch[i] = sum;
+                            }
+                        }
+                        if (j == k - 1)
+                        {
+                            c[t] = branch[m * k];
+                        }
+                    }
+
+                    countdownEvent.Signal();
+                }, i);
+            }
+
+            countdownEvent.Wait();
+
+            return c;
+        }
+
+
 
 
         //Послідовна реалізація паралельного алгоритму з автономними гілками з 2-вимірним масивом
@@ -378,8 +478,6 @@ namespace Algorithms
             }
             return c;
         }
-
-
         //Паралельний алгоритм з автономними гілками з 2-вимірним масивом
         public static double[] ParBranch2(double[] b, double[] f, int k, int m)
         {
@@ -400,13 +498,11 @@ namespace Algorithms
                     for (int i = Math.Max(0, (j - k) * m + t); i <= Math.Min(n - 1, (k - j) * m + t); i++)
                     {
                         double p = 0.0;
-                        //x[j, i] = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
                             if (s >= 0 && s < n)
                             {
                                 p += x[j - 1, s] * f[s - i + m];
-                                //x[j, i] += x[j - 1, s] * f[s - i + m];
                             }
                         }
                         x[j, i] = p;
@@ -420,57 +516,8 @@ namespace Algorithms
             }
             return c;
         }
-
-
-        //Паралельний алгоритм з автономними гілками з масивами під кожну гілку
-        public static double[] ParBranch(double[] b, double[] f, int k, int m)
-        {
-            double[] c = (double[])b.Clone();
-            Parallel.For(0, b.Length, t =>
-            {
-                double[] branch = new double[2 * m * k + 1];
-                for (int i = 0; i < branch.Length; i++)
-                {
-                    int index = t - k * m + i;
-                    if (index >= 0 && index < b.Length)
-                    {
-                        branch[i] = b[index];
-                    }
-                    else
-                    {
-                        branch[i] = 0;
-                    }
-                }
-
-                for (int j = 0; j < k; j++)
-                {
-                    double[] tempBranch = (double[])branch.Clone();
-                    int startIndex = m * (j + 1);
-                    int endIndex = (branch.Length - 1) - (m * (j + 1));
-                    for (int i = startIndex; i <= endIndex; i++)
-                    {
-                        if (i + t >= m * k && i + t <= b.Length - 1 + m * k)
-                        {
-                            double sum = 0.0;
-                            for (int s = i - m; s <= i + m; s++)
-                            {
-                                sum += tempBranch[s] * f[s - i + m];
-                            }
-                            branch[i] = sum;
-                        }
-                    }
-                    if (j == k - 1)
-                    {
-                        c[t] = branch[m * k];
-                    }
-                }
-            });
-            return c;
-        }
-
-
-        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом
-        public static double[] ParLim2(double[] b, double[] f, int k, int m)
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом з булевим масивом для уникнення дублювань
+        public static double[] ParBranch2Bool(double[] b, double[] f, int k, int m)
         {
             int n = b.Length;
             double[,] x = new double[k + 1, n];
@@ -478,23 +525,47 @@ namespace Algorithms
             {
                 x[0, i] = b[i];
             }
-            int p = Environment.ProcessorCount;
-            //int p = 12;
-            Parallel.For(0, p, t =>
+
+            bool[,] isCalculated = new bool[k, n];
+            for (int j = 0; j < k; j++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    isCalculated[j, i] = false;
+                }
+            }
+
+            //ParallelOptions po = new()
+            //{
+            //    MaxDegreeOfParallelism = 2
+            //};
+
+            Parallel.For(0, n,/* po,*/ t =>
             {
                 for (int j = 1; j <= k; j++)
                 {
-                    for (int i = Math.Max(0, (j - k) * m + (t * n / p)); i <= Math.Min(n - 1, (k - j) * m + ((t + 1) * n / p) - 1); i++)
+                    for (int i = Math.Max(0, (j - k) * m + t); i <= Math.Min(n - 1, (k - j) * m + t); i++)
                     {
-                        double p2 = 0.0;
-                        for (int s = i - m; s <= i + m; s++)
+                        // Умова для уникнення дублювань
+                        if (!isCalculated[j - 1, i])
                         {
-                            if (s >= 0 && s < n - 1)
+                            double p = 0.0;
+                            //x[j, i] = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
                             {
-                                p2 += x[j - 1, s] * f[s - i + m];
+                                if (s >= 0 && s < n - 1)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                    //x[j, i] += x[j - 1, s] * f[s - i + m];
+                                }
                             }
+                            x[j, i] = p;
+                            isCalculated[j - 1, i] = true;
                         }
-                        x[j, i] = p2;
+                        else
+                        {
+                            continue;
+                        }
                     }
                 }
             });
@@ -505,6 +576,191 @@ namespace Algorithms
             }
             return c;
         }
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом, використовуючи Threads
+        public static double[] ParBranch2Threads(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            Thread[] threads = new Thread[n];
+
+            for (int t = 0; t < n; t++)
+            {
+                int threadIndex = t;
+
+                threads[t] = new Thread(() =>
+                {
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + threadIndex); i <= Math.Min(n - 1, (k - j) * m + threadIndex); i++)
+                        {
+                            double p = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p;
+                        }
+                    }
+                });
+
+                threads[t].Start();
+            }
+
+            foreach (Thread thread in threads)
+            {
+                thread.Join();
+            }
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом, використовуючи Tasks
+        public static double[] ParBranch2Tasks(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            Task[] tasks = new Task[n];
+
+            for (int t = 0; t < n; t++)
+            {
+                int threadIndex = t;
+
+                tasks[t] = Task.Run(() =>
+                {
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + threadIndex); i <= Math.Min(n - 1, (k - j) * m + threadIndex); i++)
+                        {
+                            double p = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p;
+                        }
+                    }
+                });
+            }
+
+            Task.WaitAll(tasks);
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом, використовуючи ThreadPool
+        public static double[] ParBranch2ThreadPool(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            CountdownEvent countdownEvent = new(n);
+
+            for (int t = 0; t < n; t++)
+            {
+                ThreadPool.QueueUserWorkItem(state =>
+                {
+                    int threadIndex = (int)state;
+
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + threadIndex); i <= Math.Min(n - 1, (k - j) * m + threadIndex); i++)
+                        {
+                            double p = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p;
+                        }
+                    }
+
+                    countdownEvent.Signal();
+                }, t);
+            }
+
+            countdownEvent.Wait();
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        public static async Task<double[]> ParBranch2Async(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            Task[] tasks = new Task[n];
+            for (int t = 0; t < n; t++)
+            {
+                int threadIndex = t;
+                tasks[t] = Task.Run(async () =>
+                {
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + threadIndex); i <= Math.Min(n - 1, (k - j) * m + threadIndex); i++)
+                        {
+                            double p = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n)
+                                {
+                                    p += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p;
+                        }
+                    }
+                });
+            }
+
+            await Task.WhenAll(tasks);
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
 
 
         //Паралельний алгоритм з обмеженим паралелізмом з масивами під кожну гілку
@@ -567,181 +823,8 @@ namespace Algorithms
             });
             return c;
         }
-
-
-        //Паралельний алгоритм з автономними гілками з булевим масивом для уникнення дублювань
-        public static double[] ParBranch3(double[] b, double[] f, int k, int m)
-        {
-            int n = b.Length;
-            double[,] x = new double[k + 1, n];
-            for (int i = 0; i < n; i++)
-            {
-                x[0, i] = b[i];
-            }
-
-            bool[,] isCalculated = new bool[k, n];
-            for (int j = 0; j < k; j++)
-            {
-                for (int i = 0; i < n; i++)
-                {
-                    isCalculated[j, i] = false;
-                }
-            }
-
-            //ParallelOptions po = new()
-            //{
-            //    MaxDegreeOfParallelism = 2
-            //};
-
-            Parallel.For(0, n,/* po,*/ t =>
-            {
-                for (int j = 1; j <= k; j++)
-                {
-                    for (int i = Math.Max(0, (j - k) * m + t); i <= Math.Min(n - 1, (k - j) * m + t); i++)
-                    {
-                        // Умова для уникнення дублювань
-                        if (!isCalculated[j - 1, i])
-                        {
-                            double p = 0.0;
-                            //x[j, i] = 0.0;
-                            for (int s = i - m; s <= i + m; s++)
-                            {
-                                if (s >= 0 && s < n - 1)
-                                {
-                                    p += x[j - 1, s] * f[s - i + m];
-                                    //x[j, i] += x[j - 1, s] * f[s - i + m];
-                                }
-                            }
-                            x[j, i] = p;
-                            isCalculated[j - 1, i] = true;
-                        }
-                        else
-                        {
-                            continue;
-                        }
-                    }
-                }
-            });
-            double[] c = new double[n];
-            for (int i = 0; i < n; i++)
-            {
-                c[i] = x[k, i];
-            }
-            return c;
-        }
-
-
-        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи Threads
-        public static double[] ParLim3(double[] b, double[] f, int k, int m)
-        {
-            int n = b.Length;
-            double[,] x = new double[k + 1, n];
-            for (int i = 0; i < n; i++)
-            {
-                x[0, i] = b[i];
-            }
-
-            int p = Environment.ProcessorCount;
-            //int p = 12;
-            Thread[] threads = new Thread[p];
-            int chunkSize = n / p;
-
-            for (int t = 0; t < p; t++)
-            {
-                int start = t * chunkSize;
-                int end = (t == p - 1) ? n - 1 : (t + 1) * chunkSize - 1;
-
-                threads[t] = new Thread(() =>
-                {
-                    for (int j = 1; j <= k; j++)
-                    {
-                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
-                        {
-                            double p2 = 0.0;
-                            for (int s = i - m; s <= i + m; s++)
-                            {
-                                if (s >= 0 && s < n - 1)
-                                {
-                                    p2 += x[j - 1, s] * f[s - i + m];
-                                }
-                            }
-                            x[j, i] = p2;
-                        }
-                    }
-                });
-                threads[t].Start();
-            }
-
-            foreach (var thread in threads)
-            {
-                thread.Join();
-            }
-
-            double[] c = new double[n];
-            for (int i = 0; i < n; i++)
-            {
-                c[i] = x[k, i];
-            }
-            return c;
-        }
-
-
-        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи ThreadPool
-        public static double[] ParLim4(double[] b, double[] f, int k, int m)
-        {
-            int n = b.Length;
-            double[,] x = new double[k + 1, n];
-            for (int i = 0; i < n; i++)
-            {
-                x[0, i] = b[i];
-            }
-
-            int p = Environment.ProcessorCount;
-            //int p = 12;
-            int chunkSize = n / p;
-
-            ManualResetEvent[] waitHandles = new ManualResetEvent[p];
-            for (int t = 0; t < p; t++)
-            {
-                waitHandles[t] = new ManualResetEvent(false);
-                ThreadPool.QueueUserWorkItem(state =>
-                {
-                    int threadIndex = (int)state;
-                    int start = threadIndex * chunkSize;
-                    int end = (threadIndex == p - 1) ? n - 1 : (threadIndex + 1) * chunkSize - 1;
-
-                    for (int j = 1; j <= k; j++)
-                    {
-                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
-                        {
-                            double p2 = 0.0;
-                            for (int s = i - m; s <= i + m; s++)
-                            {
-                                if (s >= 0 && s < n - 1)
-                                {
-                                    p2 += x[j - 1, s] * f[s - i + m];
-                                }
-                            }
-                            x[j, i] = p2;
-                        }
-                    }
-                    waitHandles[threadIndex].Set();
-                }, t);
-            }
-
-            WaitHandle.WaitAll(waitHandles);
-
-            double[] c = new double[n];
-            for (int i = 0; i < n; i++)
-            {
-                c[i] = x[k, i];
-            }
-            return c;
-        }
-
-
         //Паралельний алгоритм з обмеженим паралелізмом з масивами під кожну гілку, використовуючи ThreadPool
-        public static double[] ParLim5(double[] b, double[] f, int k, int m)
+        public static double[] ParLimThreadPool(double[] b, double[] f, int k, int m)
         {
             double[] c = (double[])b.Clone();
             int p = Environment.ProcessorCount;
@@ -810,6 +893,147 @@ namespace Algorithms
 
             WaitHandle.WaitAll(waitHandles); // Чекаємо завершення всіх потоків
 
+            return c;
+        }
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом
+        public static double[] ParLim2(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+            int p = Environment.ProcessorCount;
+            //int p = 12;
+            Parallel.For(0, p, t =>
+            {
+                for (int j = 1; j <= k; j++)
+                {
+                    for (int i = Math.Max(0, (j - k) * m + (t * n / p)); i <= Math.Min(n - 1, (k - j) * m + ((t + 1) * n / p) - 1); i++)
+                    {
+                        double p2 = 0.0;
+                        for (int s = i - m; s <= i + m; s++)
+                        {
+                            if (s >= 0 && s < n - 1)
+                            {
+                                p2 += x[j - 1, s] * f[s - i + m];
+                            }
+                        }
+                        x[j, i] = p2;
+                    }
+                }
+            });
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи Threads
+        public static double[] ParLim2Threads(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            int p = Environment.ProcessorCount;
+            //int p = 12;
+            Thread[] threads = new Thread[p];
+            int chunkSize = n / p;
+
+            for (int t = 0; t < p; t++)
+            {
+                int start = t * chunkSize;
+                int end = (t == p - 1) ? n - 1 : (t + 1) * chunkSize - 1;
+
+                threads[t] = new Thread(() =>
+                {
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
+                        {
+                            double p2 = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n - 1)
+                                {
+                                    p2 += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p2;
+                        }
+                    }
+                });
+                threads[t].Start();
+            }
+
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        //Паралельний алгоритм з обмеженим паралелізмом з 2-вимірним масивом, використовуючи ThreadPool
+        public static double[] ParLim2ThreadPool(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            int p = Environment.ProcessorCount;
+            //int p = 12;
+            int chunkSize = n / p;
+
+            ManualResetEvent[] waitHandles = new ManualResetEvent[p];
+            for (int t = 0; t < p; t++)
+            {
+                waitHandles[t] = new ManualResetEvent(false);
+                ThreadPool.QueueUserWorkItem(state =>
+                {
+                    int threadIndex = (int)state;
+                    int start = threadIndex * chunkSize;
+                    int end = (threadIndex == p - 1) ? n - 1 : (threadIndex + 1) * chunkSize - 1;
+
+                    for (int j = 1; j <= k; j++)
+                    {
+                        for (int i = Math.Max(0, (j - k) * m + start); i <= Math.Min(n - 1, (k - j) * m + end); i++)
+                        {
+                            double p2 = 0.0;
+                            for (int s = i - m; s <= i + m; s++)
+                            {
+                                if (s >= 0 && s < n - 1)
+                                {
+                                    p2 += x[j - 1, s] * f[s - i + m];
+                                }
+                            }
+                            x[j, i] = p2;
+                        }
+                    }
+                    waitHandles[threadIndex].Set();
+                }, t);
+            }
+
+            WaitHandle.WaitAll(waitHandles);
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
             return c;
         }
 
