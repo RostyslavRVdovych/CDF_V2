@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
+using System.Numerics;
 using Algorithms;
 
 class Program
 {
-    //static async Task Main()
     static void Main()
     {
         int n = 1000000; // кількість елементів
-        int k = 9; // кількість переобчислень
+        int k = 7; // кількість переобчислень
         int m = 3; // рухоме вікно
 
         double xmin = 0;
@@ -24,12 +24,15 @@ class Program
         sw.Start();
         sw.Stop();
         TimeSpan sum = sw.Elapsed;
+        TimeSpan minTime = default, maxTime = default;
 
         double[] func = DigitalFiltering.CreateSinus(x);
         //double[] func = DigitalFiltering.CreateTriangularSignal(x);
         //double[] func = DigitalFiltering.CreateRectangularSignal(x);
         //double[] func = DigitalFiltering.CreateDustySignal(x);
         double[] noisyFunc = DigitalFiltering.AddNoise(func);
+        //double[] noisyFunc =
+        //    { 4,6,3,2,5 };
 
         double[] coefs = DigitalFiltering.DanielWindow(m);
         //double[] coefs = DigitalFiltering.BartlettWindow(m);
@@ -37,6 +40,8 @@ class Program
         //double alpha = 5.0;
         //double[] coefs = DigitalFiltering.KaiserWindow(m, alpha);
         double[] smoothedFunc;
+        double[] smoothedFunc2;
+        
 
         int iter = 100;
         for (int i = 0; i < iter; i++)
@@ -46,57 +51,90 @@ class Program
             stopwatch.Start();
 
             //smoothedFunc = DigitalFiltering.Seq(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
 
-            //smoothedFunc = DigitalFiltering.Par(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
+            smoothedFunc2 = DigitalFiltering.Par(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
 
-            //smoothedFunc = DigitalFiltering.ParBranch(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranchThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranchThreadPool(noisyFunc, coefs, k, m);
 
-            //smoothedFunc = DigitalFiltering.SeqBranch2(noisyFunc, coefs, k, m);
-            smoothedFunc = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2Threads(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2Tasks(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2ThreadPool(noisyFunc, coefs, k, m);
-            //smoothedFunc = await DigitalFiltering.ParBranch2Async(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParBranch2Bool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.SeqBranch2(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2Threads(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2Tasks(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2ThreadPool(noisyFunc, coefs, k, m);
 
-            //smoothedFunc = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParLimThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2Bool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2BoolTasks(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParBranch2BoolThreadPool(noisyFunc, coefs, k, m);
 
-            //smoothedFunc = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParLim2Threads(noisyFunc, coefs, k, m);
-            //smoothedFunc = DigitalFiltering.ParLim2ThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLimThreadPool(noisyFunc, coefs, k, m);
+
+            //smoothedFunc2 = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLim2Threads(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLim2ThreadPool(noisyFunc, coefs, k, m);
 
             //smoothedFunc = DigitalFiltering.MySeq(noisyFunc, k, m);
 
             stopwatch.Stop();
             TimeSpan elapsedTime = stopwatch.Elapsed;
             sum += elapsedTime;
+            if (minTime == default)
+            {
+                minTime = elapsedTime;
+            }
+            if (elapsedTime < minTime)
+            {
+                minTime = elapsedTime;
+            }
+            if (maxTime == default)
+            {
+                maxTime = elapsedTime;
+            }
+            if (elapsedTime > maxTime)
+            {
+                maxTime = elapsedTime;
+            }
 
             Console.WriteLine($"Час розпаралелювання: {elapsedTime}");
 
-            double deviation;
-            double sumOfDevioations = 0.0;
-            for (int j = 0; j < func.Length; j++)
-            {
-                sumOfDevioations += Math.Abs(func[j] - smoothedFunc[j]);
-            }
-            deviation = sumOfDevioations / func.Length;
+            //for (int j = 0; j < 5; j++)
+            //{
+            //    Console.WriteLine(smoothedFunc[j]);
+            //}
 
-            Console.WriteLine("Середнє відхилення: " + deviation);
+            //double[] check = new double[func.Length];
+            //for (int j = 0; j < func.Length; j++)
+            //{
+            //    check[j] = smoothedFunc[j] - smoothedFunc2[j];
+            //    Console.WriteLine(check[j]);
+            //}
 
-            double meanSquareDev;
-            double sumOfMeanSquareDev = 0.0;
-            for (int j = 0; j < func.Length; j++)
-            {
-                sumOfMeanSquareDev = Math.Pow(func[j] - smoothedFunc[j], 2);
-            }
-            meanSquareDev = Math.Sqrt(sumOfMeanSquareDev / func.Length);
-            Console.WriteLine("Середнє квадратичне відхилення: " + meanSquareDev);
+            //double deviation;
+            //double sumOfDevioations = 0.0;
+            //for (int j = 0; j < func.Length; j++)
+            //{
+            //    sumOfDevioations += Math.Abs(func[j] - smoothedFunc[j]);
+            //}
+            //deviation = sumOfDevioations / func.Length;
+
+            //Console.WriteLine("Середнє відхилення: " + deviation);
+
+            //double meanSquareDev;
+            //double sumOfMeanSquareDev = 0.0;
+            //for (int j = 0; j < func.Length; j++)
+            //{
+            //    sumOfMeanSquareDev = Math.Pow(func[j] - smoothedFunc[j], 2);
+            //}
+            //meanSquareDev = Math.Sqrt(sumOfMeanSquareDev / func.Length);
+            //Console.WriteLine("Середнє квадратичне відхилення: " + meanSquareDev);
         }
         sum /= iter;
         Console.WriteLine($"Середнє: {sum}");
+        Console.WriteLine($"Мін: {minTime}");
+        Console.WriteLine($"Макс: {maxTime}");
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using MathNet.Numerics;
 
 namespace Algorithms
@@ -139,7 +140,7 @@ namespace Algorithms
                     a[i] = 0;
                     for (int l = i - m; l <= i + m; l++)
                     {
-                        if (l >= 0 && l < a.Length - 1)
+                        if (l >= 0 && l < a.Length)
                         {
                             a[i] += temp[l] * f[l - i + m];
                         }
@@ -148,11 +149,13 @@ namespace Algorithms
             }
             return a;
         }
+
+
         //Паралельний алгоритм (синхронна схема)
         public static double[] Par(double[] b, double[] f, int k, int m)
         {
             double[] a = (double[])b.Clone();
-            double[] temp;
+            double[] temp = new double[a.Length];
             for (int j = 0; j < k; j++)
             {
                 temp = (double[])a.Clone();
@@ -161,7 +164,7 @@ namespace Algorithms
                     a[i] = 0;
                     for (int l = i - m; l <= i + m; l++)
                     {
-                        if (l >= 0 && l < a.Length - 1)
+                        if (l >= 0 && l < a.Length)
                         {
                             a[i] += temp[l] * f[l - i + m];
                         }
@@ -170,6 +173,51 @@ namespace Algorithms
             }
             return a;
         }
+        public static double[] ParThreadPool(double[] b, double[] f, int k, int m)
+        {
+            double[] a = (double[])b.Clone();
+            double[] temp = new double[a.Length];
+            int workerThreads = Environment.ProcessorCount;
+            ManualResetEvent[] doneEvents = new ManualResetEvent[workerThreads];
+
+            for (int j = 0; j < k; j++)
+            {
+                temp = (double[])a.Clone();
+
+                int itemsPerThread = (int)Math.Ceiling((double)a.Length / workerThreads);
+
+                for (int t = 0; t < workerThreads; t++)
+                {
+                    doneEvents[t] = new ManualResetEvent(false);
+                    int start = t * itemsPerThread;
+                    int end = Math.Min(start + itemsPerThread, a.Length);
+
+                    ThreadPool.QueueUserWorkItem((state) =>
+                    {
+                        int s = (int)state;
+                        for (int i = start; i < end; i++)
+                        {
+                            a[i] = 0;
+                            for (int l = i - m; l <= i + m; l++)
+                            {
+                                if (l >= 0 && l < a.Length)
+                                {
+                                    a[i] += temp[l] * f[l - i + m];
+                                }
+                            }
+                        }
+                        doneEvents[s].Set();
+                    }, t);
+                }
+
+                // Wait for all threads to complete
+                WaitHandle.WaitAll(doneEvents);
+            }
+
+            return a;
+        }
+        
+
         //Паралельний алгоритм з автономними гілками (не правильно працює)
         public static double[] OldParBranch(double[] b, double[] f, int k, int m)
         {
@@ -276,7 +324,7 @@ namespace Algorithms
                     x[j, i] = 0.0;
                     for (int s = i - m; s <= i + m; s++)
                     {
-                        if (s >= 0 && s < n - 1)
+                        if (s >= 0 && s < n)
                         {
                             x[j, i] += x[j - 1, s] * f[s - i + m];
                         }
@@ -306,7 +354,7 @@ namespace Algorithms
                     x[j, i] = 0.0;
                     for (int s = i - m; s <= i + m; s++)
                     {
-                        if (s >= 0 && s < n - 1)
+                        if (s >= 0 && s < n)
                         {
                             x[j, i] += x[j - 1, s] * f[s - i + m];
                         }
@@ -462,7 +510,7 @@ namespace Algorithms
                         x[j, i] = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
-                            if (s >= 0 && s < n - 1)
+                            if (s >= 0 && s < n)
                             {
                                 x[j, i] += x[j - 1, s] * f[s - i + m];
                             }
@@ -553,7 +601,7 @@ namespace Algorithms
                             //x[j, i] = 0.0;
                             for (int s = i - m; s <= i + m; s++)
                             {
-                                if (s >= 0 && s < n - 1)
+                                if (s >= 0 && s < n)
                                 {
                                     p += x[j - 1, s] * f[s - i + m];
                                     //x[j, i] += x[j - 1, s] * f[s - i + m];
@@ -718,7 +766,8 @@ namespace Algorithms
             }
             return c;
         }
-        public static async Task<double[]> ParBranch2Async(double[] b, double[] f, int k, int m)
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом з булевим масивом для уникнення дублювань, використовуючи Tasks
+        public static double[] ParBranch2BoolTasks(double[] b, double[] f, int k, int m)
         {
             int n = b.Length;
             double[,] x = new double[k + 1, n];
@@ -727,31 +776,128 @@ namespace Algorithms
                 x[0, i] = b[i];
             }
 
-            Task[] tasks = new Task[n];
+            bool[,] isCalculated = new bool[k, n];
+            for (int j = 0; j < k; j++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    isCalculated[j, i] = false;
+                }
+            }
+
+            List<Task> tasks = new List<Task>();
+
             for (int t = 0; t < n; t++)
             {
-                int threadIndex = t;
-                tasks[t] = Task.Run(async () =>
+                int index = t;
+
+                Task task = Task.Run(() =>
                 {
                     for (int j = 1; j <= k; j++)
                     {
-                        for (int i = Math.Max(0, (j - k) * m + threadIndex); i <= Math.Min(n - 1, (k - j) * m + threadIndex); i++)
+                        for (int i = Math.Max(0, (j - k) * m + index); i <= Math.Min(n - 1, (k - j) * m + index); i++)
                         {
-                            double p = 0.0;
-                            for (int s = i - m; s <= i + m; s++)
+                            // Умова для уникнення дублювань
+                            if (!isCalculated[j - 1, i])
                             {
-                                if (s >= 0 && s < n)
+                                double p = 0.0;
+                                for (int s = i - m; s <= i + m; s++)
                                 {
-                                    p += x[j - 1, s] * f[s - i + m];
+                                    if (s >= 0 && s < n)
+                                    {
+                                        p += x[j - 1, s] * f[s - i + m];
+                                    }
                                 }
+                                x[j, i] = p;
+                                isCalculated[j - 1, i] = true;
                             }
-                            x[j, i] = p;
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 });
+
+                tasks.Add(task);
             }
 
-            await Task.WhenAll(tasks);
+            Task.WaitAll(tasks.ToArray());
+
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+        //Паралельний алгоритм з автономними гілками з 2-вимірним масивом з булевим масивом для уникнення дублювань, використовуючи ThreadPool
+        public static double[] ParBranch2BoolThreadPool(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+
+            bool[,] isCalculated = new bool[k, n];
+            for (int j = 0; j < k; j++)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    isCalculated[j, i] = false;
+                }
+            }
+
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+            int tasksRemaining = n;
+
+            for (int t = 0; t < n; t++)
+            {
+                int index = t;
+
+                ThreadPool.QueueUserWorkItem((state) =>
+                {
+                    int taskIndex = (int)state;
+                    try
+                    {
+                        for (int j = 1; j <= k; j++)
+                        {
+                            for (int i = Math.Max(0, (j - k) * m + taskIndex); i <= Math.Min(n - 1, (k - j) * m + taskIndex); i++)
+                            {
+                                // Умова для уникнення дублювань
+                                if (!isCalculated[j - 1, i])
+                                {
+                                    double p = 0.0;
+                                    for (int s = i - m; s <= i + m; s++)
+                                    {
+                                        if (s >= 0 && s < n)
+                                        {
+                                            p += x[j - 1, s] * f[s - i + m];
+                                        }
+                                    }
+                                    x[j, i] = p;
+                                    isCalculated[j - 1, i] = true;
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        if (Interlocked.Decrement(ref tasksRemaining) == 0)
+                        {
+                            resetEvent.Set();
+                        }
+                    }
+                }, t);
+            }
+
+            resetEvent.WaitOne();
 
             double[] c = new double[n];
             for (int i = 0; i < n; i++)
@@ -776,7 +922,7 @@ namespace Algorithms
                 double[] branch = new double[index2 - index1 + 1];
                 for (int i = index1; i <= index2; i++)
                 {
-                    if (i >= 0 && i < b.Length)
+                    if (i >= 0 && i <= b.Length - 1)
                     {
                         branch[i - index1] = b[i];
                     }
@@ -797,7 +943,7 @@ namespace Algorithms
                         {
                             continue;
                         }
-                        else if (t == p - 1 && i > branch.Length - 1 - k * m)
+                        else if (t == p - 1 && i > branch.Length - k * m - 1)
                         {
                             continue;
                         }
@@ -915,7 +1061,7 @@ namespace Algorithms
                         double p2 = 0.0;
                         for (int s = i - m; s <= i + m; s++)
                         {
-                            if (s >= 0 && s < n - 1)
+                            if (s >= 0 && s < n)
                             {
                                 p2 += x[j - 1, s] * f[s - i + m];
                             }
@@ -960,7 +1106,7 @@ namespace Algorithms
                             double p2 = 0.0;
                             for (int s = i - m; s <= i + m; s++)
                             {
-                                if (s >= 0 && s < n - 1)
+                                if (s >= 0 && s < n)
                                 {
                                     p2 += x[j - 1, s] * f[s - i + m];
                                 }
@@ -1015,7 +1161,7 @@ namespace Algorithms
                             double p2 = 0.0;
                             for (int s = i - m; s <= i + m; s++)
                             {
-                                if (s >= 0 && s < n - 1)
+                                if (s >= 0 && s < n)
                                 {
                                     p2 += x[j - 1, s] * f[s - i + m];
                                 }
@@ -1041,60 +1187,82 @@ namespace Algorithms
         //----------------my alg
         public static double[] MySeq(double[] b, int k, int m)
         {
-            double[] c = (double[])b.Clone();
-            Parallel.For(0, b.Length, t =>
+            int n = b.Length;
+            double[] a = (double[])b.Clone();
+            for (int j = 0; j < k; j++)
             {
-                double[] branch = new double[2 * m * k + 1];
-                for (int i = 0; i < branch.Length; i++)
+                double[] temp = (double[])a.Clone();
+                for (int i = 0; i < n; i++)
                 {
-                    int index = t - k * m + i;
-                    if (index >= 0 && index < b.Length)
+                    a[i] = 0;
+                    double[] branch = new double[2 * m + 1];
+                    for (int l = 0; l < 2 * m + 1; l++)
                     {
-                        branch[i] = b[index];
+                        int index = i - m + l;
+                        if (index < 0)
+                        {
+                            branch[l] = temp[0];
+                        }
+                        else if (index >= n)
+                        {
+                            branch[l] = temp[n - 1];
+                        }
+                        else
+                        {
+                            branch[l] = temp[index];
+                        }
+                    }
+                    double mean = 0.0;
+                    for (int l = 0; l < branch.Length; l++)
+                    {
+                        mean += branch[l];
+                    }
+                    mean /= branch.Length;
+                    if (Math.Abs(mean - branch[m]) >= 0.02)
+                    {
+                        double[] coefs = GetCoefs(branch, mean);
+                        for (int l = 0; l < 2 * m + 1; l++)
+                        {
+                            a[i] += branch[l] * coefs[l];
+                        }
                     }
                     else
                     {
-                        branch[i] = 0;
+                        a[i] = branch[m];
                     }
                 }
-                double[] tempBranch = branch;
-
-                for (int j = 0; j < k; j++)
+            }
+            return a;
+        }
+        private static double[] GetCoefs(double[] branch, double mean)
+        {
+            double[] output = new double[branch.Length];
+            double[] br = (double[])branch.Clone();
+            double sum = 0.0;
+            for (int i = 0; i < br.Length; i++)
+            {
+                if (mean - br[i] == 0)
                 {
-                    tempBranch = branch;
-                    int startIndex = m * (j + 1);
-                    int endIndex = tempBranch.Length - 1 - m * (j + 1);
-                    for (int i = startIndex; i <= endIndex; i++)
-                    {
-                        double[] f = new double[2 * m + 1];
-                        double avs = 0.0;
-                        for (int s = i - m; s <= i + m; s++)
-                        {
-                            avs += tempBranch[s];
-                        }
-                        avs /= f.Length;
-
-                        double sumf = 0.0;
-                        for (int s = i - m; s <= i + m; s++)
-                        {
-                            f[s - i + m] = 1.0 / Math.Abs(tempBranch[s] - avs);
-                            sumf += f[s - i + m];
-                        }
-
-                        double sum = 0.0;
-                        for (int s = i - m; s <= i + m; s++)
-                        {
-                            sum += tempBranch[s] * (f[s - i + m] / sumf);
-                        }
-                        branch[i] = sum;
-                    }
-                    if (j == k - 1)
-                    {
-                        c[t] = branch[m * k];
-                    }
+                    sum += br[i];
                 }
-            });
-            return c;
+                else
+                {
+                    br[i] = 1.0 / Math.Abs(mean - br[i]);
+                    sum += br[i];
+                }
+            }
+            for (int i = 0; i < br.Length; i++)
+            {
+                if (sum == 0.0)
+                {
+                    output[i] = br[i];
+                }
+                else
+                {
+                    output[i] = br[i] / sum;
+                }
+            }
+            return output;
         }
     }
 }
