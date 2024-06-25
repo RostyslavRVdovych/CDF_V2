@@ -216,7 +216,39 @@ namespace Algorithms
 
             return a;
         }
-        
+        public static double[] ParParallelFor(double[] b, double[] f, int k, int m)
+        {
+            double[] a = (double[])b.Clone();
+            double[] temp = new double[a.Length];
+            int workerThreads = Environment.ProcessorCount;
+
+            for (int j = 0; j < k; j++)
+            {
+                temp = (double[])a.Clone();
+
+                Parallel.For(0, workerThreads, t =>
+                {
+                    int itemsPerThread = (int)Math.Ceiling((double)a.Length / workerThreads);
+                    int start = t * itemsPerThread;
+                    int end = Math.Min(start + itemsPerThread, a.Length);
+
+                    for (int i = start; i < end; i++)
+                    {
+                        a[i] = 0;
+                        for (int l = i - m; l <= i + m; l++)
+                        {
+                            if (l >= 0 && l < a.Length)
+                            {
+                                a[i] += temp[l] * f[l - i + m];
+                            }
+                        }
+                    }
+                });
+            }
+
+            return a;
+        }
+
 
         //Паралельний алгоритм з автономними гілками (не правильно працює)
         public static double[] OldParBranch(double[] b, double[] f, int k, int m)

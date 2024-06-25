@@ -6,9 +6,9 @@ class Program
 {
     static void Main()
     {
-        int n = 1000000; // кількість елементів
-        int k = 7; // кількість переобчислень
-        int m = 3; // рухоме вікно
+        int n = 1200000; // кількість елементів
+        int k = 5; // кількість переобчислень
+        int m = 7; // рухоме вікно
 
         double xmin = 0;
         double xmax = 2 * Math.PI;
@@ -51,10 +51,18 @@ class Program
             stopwatch.Start();
 
             //smoothedFunc = DigitalFiltering.Seq(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParParallelFor(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLimThreadPool(noisyFunc, coefs, k, m);
+            smoothedFunc2 = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
+
+
+            //smoothedFunc = DigitalFiltering.Seq(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.Seq2(noisyFunc, coefs, k, m);
 
-            smoothedFunc2 = DigitalFiltering.Par(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.Par(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParThreadPool(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParParallelFor(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.Par2(noisyFunc, coefs, k, m);
 
             //smoothedFunc2 = DigitalFiltering.ParBranch(noisyFunc, coefs, k, m);
@@ -136,5 +144,6 @@ class Program
         Console.WriteLine($"Середнє: {sum}");
         Console.WriteLine($"Мін: {minTime}");
         Console.WriteLine($"Макс: {maxTime}");
+        Console.ReadKey();
     }
 }
