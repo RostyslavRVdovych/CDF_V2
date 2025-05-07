@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Numerics;
 using MathNet.Numerics;
 
 namespace Algorithms
@@ -1215,6 +1216,148 @@ namespace Algorithms
             return c;
         }
 
+
+
+        public static double[] ParLimNew(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[,] x = new double[k + 1, n];
+            for (int i = 0; i < n; i++)
+            {
+                x[0, i] = b[i];
+            }
+            int p = Environment.ProcessorCount;
+            Parallel.For(0, p, t =>
+            {
+                for (int j = 1; j <= k; j++)
+                {
+                    int start = t * n / p;
+                    int end = (t + 1) * n / p;
+                    if (t == p - 1) end = n;
+                    for (int i = start; i < end; i++)
+                    {
+                        double p2 = 0.0;
+                        int index = i - (k - j) * m;
+                        if (index < 0)
+                        {
+                            index = n + index;
+                        }
+                        for (int s = index - m; s <= index + m; s++)
+                        {
+                            if (s >= 0 && s < n)
+                            {
+                                p2 += x[j - 1, s] * f[s - index + m];
+                            }
+                        }
+                        x[j, index] = p2;
+                    }
+                }
+            });
+            double[] c = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                c[i] = x[k, i];
+            }
+            return c;
+        }
+
+
+
+        public static double[] ParLimNew2(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[][] x = new double[k + 1][];
+
+            for (int j = 0; j <= k; j++)
+                x[j] = new double[n];
+
+            Array.Copy(b, x[0], n);
+
+            int p = Environment.ProcessorCount;
+            int chunkSize = n / p;
+
+            for (int j = 1; j <= k; j++)
+            {
+                Parallel.For(0, p, t =>
+                {
+                    int start = t * chunkSize;
+                    int end = (t == p - 1) ? n : (t + 1) * chunkSize;
+
+                    for (int i = start; i < end; i++)
+                    {
+                        double p2 = 0.0;
+                        int index = i - (k - j) * m;
+                        if (index < 0)
+                            index += n;
+
+                        for (int s = Math.Max(0, index - m); s <= Math.Min(n - 1, index + m); s++)
+                        {
+                            int fi = s - index + m;
+                            p2 += x[j - 1][s] * f[fi];
+                        }
+                        x[j][index] = p2;
+                    }
+                });
+            }
+
+            return x[k];
+        }
+
+
+        public static double[] ParLimNewSIMD(double[] b, double[] f, int k, int m)
+        {
+            int n = b.Length;
+            double[][] x = new double[k + 1][];
+
+            for (int j = 0; j <= k; j++)
+                x[j] = new double[n];
+
+            Array.Copy(b, x[0], n);
+
+            int p = Environment.ProcessorCount;
+            int chunkSize = n / p;
+            int vectorSize = Vector<double>.Count; // SIMD: кількість елементів у векторі
+
+            for (int j = 1; j <= k; j++)
+            {
+                Parallel.For(0, p, t =>
+                {
+                    int start = t * chunkSize;
+                    int end = (t == p - 1) ? n : (t + 1) * chunkSize;
+
+                    for (int i = start; i < end; i++)
+                    {
+                        double p2 = 0.0;
+                        int index = i - (k - j) * m;
+                        if (index < 0)
+                            index += n;
+
+                        int fiStart = Math.Max(0, index - m);
+                        int fiEnd = Math.Min(n - 1, index + m);
+
+                        // SIMD: Векторизоване множення
+                        int s;
+                        for (s = fiStart; s <= fiEnd - vectorSize; s += vectorSize)
+                        {
+                            var vecX = new Vector<double>(x[j - 1], s);
+                            var vecF = new Vector<double>(f, s - index + m);
+                            p2 += Vector.Dot(vecX, vecF); // SIMD множення + додавання
+                        }
+
+                        // Обробка залишкових значень (без SIMD)
+                        for (; s <= fiEnd; s++)
+                        {
+                            int fi = s - index + m;
+                            p2 += x[j - 1][s] * f[fi];
+                        }
+
+                        x[j][index] = p2;
+                    }
+                });
+            }
+
+            return x[k];
+        }
 
         //----------------my alg
         public static double[] MySeq(double[] b, int k, int m)
