@@ -54,7 +54,10 @@ class Program
             //smoothedFunc2 = DigitalFiltering.ParThreadPool(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParParallelFor(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParLimThreadPool(noisyFunc, coefs, k, m);
-            smoothedFunc2 = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
+            //smoothedFunc2 = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
+
+            //smoothedFunc2 = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
+            smoothedFunc2 = DigitalFiltering.ParLimNew2(noisyFunc, coefs, k, m);
 
 
             //smoothedFunc = DigitalFiltering.Seq(noisyFunc, coefs, k, m);
@@ -81,7 +84,6 @@ class Program
             //smoothedFunc2 = DigitalFiltering.ParLim(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParLimThreadPool(noisyFunc, coefs, k, m);
 
-            //smoothedFunc2 = DigitalFiltering.ParLim2(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParLim2Threads(noisyFunc, coefs, k, m);
             //smoothedFunc2 = DigitalFiltering.ParLim2ThreadPool(noisyFunc, coefs, k, m);
 
